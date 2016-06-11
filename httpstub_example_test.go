@@ -16,7 +16,14 @@ func Example() {
 	ts := httpstub.New().WithDefaultContentType(ctJSON)
 	defer ts.Close()
 
-	ts.Path("/user/*/name").WithBody(`{"id":"a1","name":"Alice"}`)
+	// the default status for name requests will be 204 no content
+	nameEndpoint := ts.Path("/user/*/name").WithStatus(http.StatusNoContent)
+	nameEndpoint.WithMethod("PUT")
+	nameEndpoint.WithMethod("DELETE")
+
+	// overrides the status
+	nameEndpoint.WithMethod("GET").WithBody(`{"id":"a1","name":"Alice"}`).WithStatus(http.StatusOK)
+
 	ts.Path("/user/*/xml").WithContentType(ctXML).WithBody(`<user id="a1"><name>Alice</name></user>`)
 	ts.Path("/user").WithBody(`{"id":"a1","name":"Alice","gender":"f"}`)
 

@@ -8,28 +8,51 @@ type Endpoint struct {
 	status      int
 	contentType string
 	body        []byte
+
+	forMethod map[string]*Endpoint
 }
 
-// WithStatus sets the response status code for the endpoint
+// WithMethod creates a method-specific endpoint within a path.
+func (e *Endpoint) WithMethod(m string) *Endpoint {
+	me := &Endpoint{
+		status:      e.status,
+		contentType: e.contentType,
+		body:        e.body,
+	}
+
+	if e.forMethod == nil {
+		e.forMethod = make(map[string]*Endpoint)
+	}
+	e.forMethod[m] = me
+	return me
+}
+
+// WithStatus sets the response status code for the endpoint.
 func (e *Endpoint) WithStatus(s int) *Endpoint {
 	e.status = s
 	return e
 }
 
-// WithContentType overrides the server's default content type for the endpoint
+// WithContentType overrides the server's default content type for the endpoint.
 func (e *Endpoint) WithContentType(t string) *Endpoint {
 	e.contentType = t
 	return e
 }
 
-// WithBody sets the body the endpoint should return
+// WithBody sets the body the endpoint should return.
 func (e *Endpoint) WithBody(b string) *Endpoint {
 	e.body = []byte(b)
 	return e
 }
 
-// ServeHTTP lets Endpoint implement http.Handler
+// ServeHTTP lets Endpoint implement http.Handler.
 func (e *Endpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// use the method-specific handler if available
+	if me, ok := e.forMethod[r.Method]; ok {
+		me.ServeHTTP(w, r)
+		return
+	}
+
 	if len(e.contentType) > 0 {
 		w.Header().Set("Content-Type", e.contentType)
 	}

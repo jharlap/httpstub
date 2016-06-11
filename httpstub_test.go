@@ -16,8 +16,7 @@ func TestIsAnHTTPServer(t *testing.T) {
 	ts := httpstub.New()
 	defer ts.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
-	defer cancel()
+	ctx, _ := context.WithTimeout(context.Background(), time.Millisecond)
 	_, err := ctxhttp.Get(ctx, nil, ts.URL)
 	if err != nil {
 		t.Errorf("unexpected err: %s", err)
@@ -33,8 +32,7 @@ func TestEndpointWithStatus(t *testing.T) {
 
 		ts.Path("/").WithStatus(ex)
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
-		defer cancel()
+		ctx, _ := context.WithTimeout(context.Background(), time.Millisecond)
 		resp, err := ctxhttp.Get(ctx, nil, ts.URL)
 		if err != nil {
 			t.Errorf("%d: unexpected err: %s", ex, err)
@@ -67,8 +65,7 @@ func TestPathMatching(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
-		defer cancel()
+		ctx, _ := context.WithTimeout(context.Background(), time.Millisecond)
 		resp, err := ctxhttp.Get(ctx, nil, ts.URL+tc.path)
 		if err != nil {
 			t.Errorf("%s: unexpected err: %s", tc.path, err)
@@ -88,8 +85,7 @@ func TestEndpointWithContentType(t *testing.T) {
 
 		ts.Path("/").WithContentType(ex)
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
-		defer cancel()
+		ctx, _ := context.WithTimeout(context.Background(), time.Millisecond)
 		resp, err := ctxhttp.Get(ctx, nil, ts.URL)
 		if err != nil {
 			t.Errorf("%s: unexpected err: %s", ex, err)
@@ -111,8 +107,7 @@ func TestEndpointWithBody(t *testing.T) {
 
 		ts.Path("/").WithBody(ex)
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
-		defer cancel()
+		ctx, _ := context.WithTimeout(context.Background(), time.Millisecond)
 		resp, err := ctxhttp.Get(ctx, nil, ts.URL)
 		if err != nil {
 			t.Errorf("%s: unexpected err: %s", ex, err)
@@ -125,6 +120,58 @@ func TestEndpointWithBody(t *testing.T) {
 
 		if string(b) != ex {
 			t.Errorf("expected: %s got: %s", ex, string(b))
+		}
+	}
+
+}
+
+func TestEndpointWithMethods(t *testing.T) {
+	cases := []struct {
+		method string
+		status int
+		body   string
+	}{
+		{"GET", http.StatusOK, "hello"},
+		{"PUT", http.StatusNoContent, ""},
+		{"TEAPOT", http.StatusTeapot, "ceylon?"},
+	}
+
+	ts := httpstub.New()
+	defer ts.Close()
+
+	e := ts.Path("/").WithContentType("text/plain").WithStatus(http.StatusTeapot)
+	e.WithMethod("GET").WithStatus(200).WithBody("hello")
+	e.WithMethod("PUT").WithStatus(204)
+	e.WithMethod("TEAPOT").WithBody("ceylon?") // inherits the default status
+
+	for _, tc := range cases {
+
+		ctx, _ := context.WithTimeout(context.Background(), time.Millisecond)
+		req, err := http.NewRequest(tc.method, ts.URL, nil)
+		if err != nil {
+			t.Errorf("%s: unexpected err: %s", tc.method, err)
+		}
+
+		resp, err := ctxhttp.Do(ctx, nil, req)
+		if err != nil {
+			t.Errorf("%s: unexpected err: %s", tc.method, err)
+		}
+
+		if resp.StatusCode != tc.status {
+			t.Errorf("%s: status expected: %d, got: %d", tc.method, tc.status, resp.StatusCode)
+		}
+
+		if resp.Header.Get("content-type") != "text/plain" {
+			t.Errorf("%s: content-type expected: text/plain, got: %s", tc.method, resp.Header.Get("content-type"))
+		}
+
+		b, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			t.Errorf("%s: unexpected err: %s", tc.method, err)
+		}
+
+		if string(b) != tc.body {
+			t.Errorf("%s: body expected: %s got: %s", tc.method, tc.body, string(b))
 		}
 	}
 

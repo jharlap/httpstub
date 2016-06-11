@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// Server is a configurable stub server
+// Server is a configurable stub server.
 type Server struct {
 	URL string
 
@@ -15,7 +15,7 @@ type Server struct {
 	defaultContentType string
 }
 
-// New starts a new stub server
+// New starts a new stub server.
 func New() *Server {
 	s := &Server{}
 	ts := httptest.NewServer(s)
@@ -24,12 +24,12 @@ func New() *Server {
 	return s
 }
 
-// Close shuts down the server and releases the port it was listening on
+// Close shuts down the server and releases the port it was listening on.
 func (s *Server) Close() {
 	s.srv.Close()
 }
 
-// Path creates an endpoint to respond to a request URL path. Paths can be static prefixes or may contain * to signify a path component wildcard, so /u/*/n matches /u/2/n
+// Path creates an endpoint to respond to a request URL path. Paths can be static prefixes or may contain * to signify a path component wildcard, so /u/*/n matches /u/2/n.
 func (s *Server) Path(p string) *Endpoint {
 	e := &Endpoint{
 		path:        p,
@@ -45,7 +45,7 @@ func (s *Server) WithDefaultContentType(t string) *Server {
 	return s
 }
 
-// ServeHTTP sets *Server implement http.Handler
+// ServeHTTP sets *Server implement http.Handler.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// compare each path component one by one, treating * as a wildcard
 	pc := strings.Split(r.URL.Path, "/")
