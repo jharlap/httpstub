@@ -1,6 +1,9 @@
 package httpstub
 
-import "net/http"
+import (
+	"net/http"
+	"time"
+)
 
 // An Endpoint is added to a stub server with server.Path(), and implements a handler that will be matched against a path prefix.
 type Endpoint struct {
@@ -8,6 +11,7 @@ type Endpoint struct {
 	status      int
 	contentType string
 	body        []byte
+	delay       time.Duration
 
 	forMethod map[string]*Endpoint
 }
@@ -18,6 +22,7 @@ func (e *Endpoint) WithMethod(m string) *Endpoint {
 		status:      e.status,
 		contentType: e.contentType,
 		body:        e.body,
+		delay:       e.delay,
 	}
 
 	if e.forMethod == nil {
@@ -45,12 +50,22 @@ func (e *Endpoint) WithBody(b string) *Endpoint {
 	return e
 }
 
+// WithDelay sets a delay before the endpoint responds
+func (e *Endpoint) WithDelay(d time.Duration) *Endpoint {
+	e.delay = d
+	return e
+}
+
 // ServeHTTP lets Endpoint implement http.Handler.
 func (e *Endpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// use the method-specific handler if available
 	if me, ok := e.forMethod[r.Method]; ok {
 		me.ServeHTTP(w, r)
 		return
+	}
+
+	if e.delay > 0 {
+		time.Sleep(e.delay)
 	}
 
 	if len(e.contentType) > 0 {

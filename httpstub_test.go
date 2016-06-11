@@ -12,11 +12,13 @@ import (
 	"golang.org/x/net/context/ctxhttp"
 )
 
+const baseTimeout = 5 * time.Millisecond
+
 func TestIsAnHTTPServer(t *testing.T) {
 	ts := httpstub.New()
 	defer ts.Close()
 
-	ctx, _ := context.WithTimeout(context.Background(), time.Millisecond)
+	ctx, _ := context.WithTimeout(context.Background(), baseTimeout)
 	_, err := ctxhttp.Get(ctx, nil, ts.URL)
 	if err != nil {
 		t.Errorf("unexpected err: %s", err)
@@ -32,7 +34,7 @@ func TestEndpointWithStatus(t *testing.T) {
 
 		ts.Path("/").WithStatus(ex)
 
-		ctx, _ := context.WithTimeout(context.Background(), time.Millisecond)
+		ctx, _ := context.WithTimeout(context.Background(), baseTimeout)
 		resp, err := ctxhttp.Get(ctx, nil, ts.URL)
 		if err != nil {
 			t.Errorf("%d: unexpected err: %s", ex, err)
@@ -65,7 +67,7 @@ func TestPathMatching(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		ctx, _ := context.WithTimeout(context.Background(), time.Millisecond)
+		ctx, _ := context.WithTimeout(context.Background(), baseTimeout)
 		resp, err := ctxhttp.Get(ctx, nil, ts.URL+tc.path)
 		if err != nil {
 			t.Errorf("%s: unexpected err: %s", tc.path, err)
@@ -85,7 +87,7 @@ func TestEndpointWithContentType(t *testing.T) {
 
 		ts.Path("/").WithContentType(ex)
 
-		ctx, _ := context.WithTimeout(context.Background(), time.Millisecond)
+		ctx, _ := context.WithTimeout(context.Background(), baseTimeout)
 		resp, err := ctxhttp.Get(ctx, nil, ts.URL)
 		if err != nil {
 			t.Errorf("%s: unexpected err: %s", ex, err)
@@ -107,7 +109,7 @@ func TestEndpointWithBody(t *testing.T) {
 
 		ts.Path("/").WithBody(ex)
 
-		ctx, _ := context.WithTimeout(context.Background(), time.Millisecond)
+		ctx, _ := context.WithTimeout(context.Background(), baseTimeout)
 		resp, err := ctxhttp.Get(ctx, nil, ts.URL)
 		if err != nil {
 			t.Errorf("%s: unexpected err: %s", ex, err)
@@ -122,7 +124,6 @@ func TestEndpointWithBody(t *testing.T) {
 			t.Errorf("expected: %s got: %s", ex, string(b))
 		}
 	}
-
 }
 
 func TestEndpointWithMethods(t *testing.T) {
@@ -146,7 +147,7 @@ func TestEndpointWithMethods(t *testing.T) {
 
 	for _, tc := range cases {
 
-		ctx, _ := context.WithTimeout(context.Background(), time.Millisecond)
+		ctx, _ := context.WithTimeout(context.Background(), baseTimeout)
 		req, err := http.NewRequest(tc.method, ts.URL, nil)
 		if err != nil {
 			t.Errorf("%s: unexpected err: %s", tc.method, err)
@@ -175,4 +176,38 @@ func TestEndpointWithMethods(t *testing.T) {
 		}
 	}
 
+}
+
+func TestEndpointWithDelay(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	cases := []time.Duration{5 * time.Millisecond, 30 * time.Millisecond}
+
+	for _, ex := range cases {
+		ts := httpstub.New()
+		defer ts.Close()
+
+		ts.Path("/").WithDelay(ex)
+
+		timeout := ex * 2
+		if timeout < time.Millisecond {
+			timeout = time.Millisecond
+		}
+		ctx, _ := context.WithTimeout(context.Background(), timeout)
+
+		start := time.Now()
+		_, err := ctxhttp.Get(ctx, nil, ts.URL)
+		took := time.Since(start)
+		if err != nil {
+			t.Errorf("%s: unexpected err: %s", ex, err)
+		}
+
+		// allow 50% slop in timing
+		a := took.Nanoseconds()
+		e := ex.Nanoseconds()
+		if a < (e*5)/10 || a > (e*15)/10 {
+			t.Errorf("expected: %s got: %s", ex, took)
+		}
+	}
 }
