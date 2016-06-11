@@ -6,12 +6,10 @@ API doc: http://godoc.org/github.com/jharlap/httpstub
 ts := httpstub.New().WithDefaultContentType(ctJSON)
 defer ts.Close()
 
-// the default status for name requests will be 204 no content
+// the default status for name requests will be 204 no content, this will match PUT and DELETE
 nameEndpoint := ts.Path("/user/*/name").WithStatus(http.StatusNoContent)
-nameEndpoint.WithMethod("PUT")
-nameEndpoint.WithMethod("DELETE")
 
-// overrides the status
+// GET overrides the status and body
 nameEndpoint.WithMethod("GET").WithBody(`{"id":"a1","name":"Alice"}`).WithStatus(http.StatusOK)
 
 // endpoint-specific content type
@@ -24,3 +22,4 @@ client := mine{a3rdPartyServerURL: ts.URL}
 client.DoSomething() // that makes HTTP requests to the 3rd party server
 ```
 
+Note that the `With...` methods are designed for chaining, and mutate the object they are invoked on.
