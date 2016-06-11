@@ -47,28 +47,32 @@ func (s *Server) WithDefaultContentType(t string) *Server {
 
 // ServeHTTP sets *Server implement http.Handler.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// compare each path component one by one, treating * as a wildcard
-	pc := strings.Split(r.URL.Path, "/")
-
-ENDPOINT:
 	for _, e := range s.endpoints {
-		ec := strings.Split(e.path, "/")
-		if len(ec) > len(pc) {
+		// find the first matching endpoint
+		if !matches(r.URL.Path, e.path) {
 			continue
 		}
 
-		for i, c := range ec {
-			if c == "*" {
-				continue
-			}
-			if c != pc[i] {
-				// mismatching path, so stop comparing this endpoint
-				continue ENDPOINT
-			}
-		}
-
-		// the pattern must match to get here
 		e.ServeHTTP(w, r)
 		return
 	}
+}
+
+// matches checks the request path against an endpoint path prefix pattern, comparing each path component one by one, treating * as a wildcard
+func matches(req, endp string) bool {
+	pc := strings.Split(req, "/")
+	ec := strings.Split(endp, "/")
+	if len(ec) > len(pc) {
+		return false
+	}
+
+	for i, c := range ec {
+		if c == "*" {
+			continue
+		}
+		if c != pc[i] {
+			return false
+		}
+	}
+	return true
 }

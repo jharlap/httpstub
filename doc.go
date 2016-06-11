@@ -1,2 +1,2 @@
-// Easily configure http test servers for stubbing external dependencies, for testing in Go.
+// Package httpstub facilitates creating test servers for stubbing external dependencies.
 package httpstub

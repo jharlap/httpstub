@@ -6,7 +6,7 @@ API doc: http://godoc.org/github.com/jharlap/httpstub
 ts := httpstub.New().WithDefaultContentType(ctJSON)
 defer ts.Close()
 
-// the default status for name requests will be 204 no content, this will match PUT and DELETE
+// the default status for name requests will be 204 no content, this will match PUT, DELETE, ...
 nameEndpoint := ts.Path("/user/*/name").WithStatus(http.StatusNoContent)
 
 // GET overrides the status and body
